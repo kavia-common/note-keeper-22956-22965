@@ -1,9 +1,11 @@
 import json
 import os
-from app import app, api  # import your Flask app and Api instance
+from app import app
+from flask_smorest import Api
 
 with app.app_context():
-    # flask-smorest stores the spec in api.spec
+    # Build a fresh Api spec from registered blueprints
+    api = Api(app)
     openapi_spec = api.spec.to_dict()
 
     output_dir = "interfaces"
