@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_smorest import Api
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
+import os
 
 # Initialize SQLAlchemy globally for model modules to import
 db = SQLAlchemy()
@@ -23,6 +24,14 @@ def create_app():
         # For CI/docs generation, we set a fallback; in production, set via env.
         app.config["SECRET_KEY"] = "dev-insecure-secret-change-me"
 
+    # Ensure SQLite instance directory exists if using file-based sqlite path
+    if app.config.get("SQLALCHEMY_DATABASE_URI", "").startswith("sqlite:///"):
+        # Extract path after sqlite:/// and create parent dirs if needed
+        db_path = app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "", 1)
+        instance_dir = os.path.dirname(db_path)
+        if instance_dir and not os.path.exists(instance_dir):
+            os.makedirs(instance_dir, exist_ok=True)
+
     # Initialize extensions
     db.init_app(app)
 
@@ -34,6 +43,7 @@ def create_app():
     app.config["OPENAPI_SWAGGER_UI_URL"] = app.config.get("OPENAPI_SWAGGER_UI_URL", "https://cdn.jsdelivr.net/npm/swagger-ui-dist/")
     app.config["OPENAPI_URL_PREFIX"] = app.config.get("OPENAPI_URL_PREFIX", "/docs")
 
+    # Single Api initialization; avoid duplicate Api(app) at module level
     api = Api(app)
 
     # Import and register blueprints
@@ -52,6 +62,5 @@ def create_app():
 
     return app
 
-# Expose app and api for external imports like generate_openapi.py
+# Expose app for external imports like run.py and generate_openapi.py
 app = create_app()
-api = Api(app)
